@@ -7,7 +7,12 @@ defmodule Gust.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: %{
+        description: "Lightweight Tailwind CSS class merging for Elixir. Zero dependencies, no compile-time overhead.",
+        licenses: ["GPL-3.0-or-later"],
+        links: %{"GitHub" => "https://github.com/hyftar/gust"}
+      }
     ]
   end
 
