@@ -113,9 +113,13 @@ defmodule Gust.Merger do
         do_replace_or_decompose(rest, override, override_group, decompositions, ancestors, true, acc)
 
       is_shorthand_of?(base_group, override_group, decompositions, ancestors) ->
-        decomposed = decompose_shorthand(base, base_group, override_group, decompositions)
-        merged_acc = merge_decomposed_into_acc(acc, decomposed, rest, decompositions, ancestors)
-        do_replace_or_decompose(rest, override, override_group, decompositions, ancestors, true, merged_acc)
+        if Gust.Config.decompose() do
+          decomposed = decompose_shorthand(base, base_group, override_group, decompositions)
+          merged_acc = merge_decomposed_into_acc(acc, decomposed, rest, decompositions, ancestors)
+          do_replace_or_decompose(rest, override, override_group, decompositions, ancestors, true, merged_acc)
+        else
+          do_replace_or_decompose(rest, override, override_group, decompositions, ancestors, true, acc)
+        end
 
       is_shorthand_of?(override_group, base_group, decompositions, ancestors) ->
         do_replace_or_decompose(rest, override, override_group, decompositions, ancestors, true, acc)

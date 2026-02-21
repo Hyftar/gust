@@ -80,7 +80,7 @@ defmodule Gust do
       "p-2"
 
       iex> Gust.merge("p-4", "px-2")
-      "py-4 px-2"
+      "px-2"
 
       iex> Gust.merge("font-bold", "font-thin")
       "font-thin"

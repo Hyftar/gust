@@ -12,6 +12,9 @@ defmodule Gust.Config do
 
       # Tailwind class prefix (e.g., "tw-" if using prefix: 'tw-' in tailwind.config)
       config :gust, :class_prefix, "tw-"
+
+      # Enable directional decomposition (default: false — opt-in only, see README)
+      config :gust, :decompose, true
   """
 
   @doc "Returns the list of custom color names."
@@ -27,5 +30,10 @@ defmodule Gust.Config do
   @doc "Returns the configured class prefix (e.g., \"tw-\"), or empty string if none."
   def class_prefix do
     Application.get_env(:gust, :class_prefix, "")
+  end
+
+  @doc "Returns true if directional decomposition is enabled (default: false)."
+  def decompose do
+    Application.get_env(:gust, :decompose, false)
   end
 end

@@ -44,13 +44,13 @@ Gust.merge("p-4", "p-2")
 Gust.merge("p-4", "m-2")
 #=> "p-4 m-2"
 
-# Directional decomposition: shorthand split when longhand overrides one axis
+# Longhand overrides shorthand: shorthand is dropped entirely
 Gust.merge("p-4", "px-2")
-#=> "py-4 px-2"
+#=> "px-2"
 
-# Transitive decomposition
-Gust.merge("p-4", "pt-2")
-#=> "px-4 pb-4 pt-2"
+# Shorthand overrides longhands: shorthand wins, longhands removed
+Gust.merge("px-2 py-4", "p-8")
+#=> "p-8"
 
 # Variants are respected — same group but different variants don't conflict
 Gust.merge("p-4", "hover:p-2")
@@ -116,7 +116,7 @@ import Gust
 #=> "p-2"
 
 ~t"p-4 px-2"
-#=> "py-4 px-2"
+#=> "px-2"
 ```
 
 ### `remove:` prefix
@@ -181,7 +181,7 @@ Gust.merge("tw-p-4", "tw-p-2")
 #=> "tw-p-2"
 
 Gust.merge("tw-p-4", "tw-px-2")
-#=> "tw-py-4 tw-px-2"
+#=> "tw-px-2"
 ```
 
 ## Configuration
@@ -199,6 +199,41 @@ config :gust, :custom_colors, ["primary", "secondary", "brand-blue"]
 
 # Classes that are never merged — always kept as-is (default: [])
 config :gust, :no_merge_classes, ["custom-utility"]
+
+# Enable directional decomposition (default: false — see below)
+config :gust, :decompose, true
+```
+
+## Directional decomposition
+
+Tailwind's shorthand utilities like `p-*` expand to set all four sides. When a longhand like `px-2` overrides a shorthand like `p-4`, there are two possible strategies:
+
+**Drop (default):** The shorthand is removed and the longhand takes over. Simple, safe, and predictable — Tailwind's scanner only ever sees class names that are literally present in your source.
+
+```elixir
+Gust.merge("p-4", "px-2")
+#=> "px-2"
+```
+
+**Decompose (opt-in):** The shorthand is split into its non-conflicting children and the override is applied. The result preserves more information, but the decomposed class names (e.g., `py-4`) are generated at runtime — Tailwind's static scanner cannot see them and will not include them in the stylesheet unless they appear elsewhere in your source.
+
+```elixir
+# config/config.exs
+config :gust, decompose: true
+```
+
+```elixir
+Gust.merge("p-4", "px-2")
+#=> "py-4 px-2"   # <!> py-4 must exist in Tailwind's safelist or source scan
+```
+
+Only enable decomposition if you are using Tailwind's [safelist](https://tailwindcss.com/docs/content-configuration#safelisting-classes) or can otherwise guarantee all decomposed class names are present in the stylesheet.
+
+Note that the reverse direction — a shorthand overriding existing longhands — always works safely regardless of this setting, because the shorthand class was already present in your source:
+
+```elixir
+Gust.merge("px-2 py-4", "p-8")
+#=> "p-8"
 ```
 
 ## How it works
@@ -208,5 +243,5 @@ Gust builds a prefix trie from declarative group definitions at runtime. Each Ta
 1. Both class strings are parsed into structured maps (variants, base, modifiers, arbitrary values).
 2. Each class is classified to a group via trie lookup.
 3. For each override class, any base class in the same group **and** with the same variant set is removed.
-4. If a base class is a shorthand ancestor of the override's group (e.g., `p-4` is an ancestor of `px`), it is **decomposed** into its children, and only the conflicting child is dropped.
+4. If a base class is a shorthand ancestor of the override's group (e.g., `p-4` is an ancestor of `px`), it is dropped (or decomposed if `config :gust, decompose: true`).
 5. The resulting class list is reconstructed into a string.

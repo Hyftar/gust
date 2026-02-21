@@ -57,9 +57,9 @@ defmodule Gust.ClassesTest do
       assert ~t"p-4   mt-2" == "p-4 mt-2"
     end
 
-    test "directional decomposition" do
+    test "shorthand dropped when longhand overrides" do
       import Gust
-      assert ~t"p-4 px-2" == "py-4 px-2"
+      assert ~t"p-4 px-2" == "px-2"
     end
   end
 end

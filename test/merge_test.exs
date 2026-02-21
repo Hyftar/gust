@@ -35,28 +35,28 @@ defmodule Gust.MergeTest do
     end
   end
 
-  describe "merge/2 - directional decomposition" do
-    test "p shorthand + px longhand decomposes to px + py" do
-      assert Gust.merge("p-4", "px-2") == "py-4 px-2"
+  describe "merge/2 - shorthand dropped when longhand overrides" do
+    test "p shorthand dropped, longhand px wins" do
+      assert Gust.merge("p-4", "px-2") == "px-2"
     end
 
-    test "p shorthand + pt longhand decomposes into py then pt wins" do
-      assert Gust.merge("p-4", "pt-2") == "px-4 pb-4 pt-2"
+    test "p shorthand dropped, longhand pt wins" do
+      assert Gust.merge("p-4", "pt-2") == "pt-2"
     end
 
-    test "px shorthand + pr longhand" do
-      assert Gust.merge("px-4", "pr-2") == "pl-4 pr-2"
+    test "px shorthand dropped, longhand pr wins" do
+      assert Gust.merge("px-4", "pr-2") == "pr-2"
     end
 
-    test "m shorthand + mx longhand" do
-      assert Gust.merge("m-4", "mx-2") == "my-4 mx-2"
+    test "m shorthand dropped, longhand mx wins" do
+      assert Gust.merge("m-4", "mx-2") == "mx-2"
     end
 
-    test "gap shorthand + gap-x longhand" do
-      assert Gust.merge("gap-4", "gap-x-2") == "gap-y-4 gap-x-2"
+    test "gap shorthand dropped, longhand gap-x wins" do
+      assert Gust.merge("gap-4", "gap-x-2") == "gap-x-2"
     end
 
-    test "shorthand then two longhands" do
+    test "shorthand dropped, explicit longhands both kept" do
       assert Gust.merge("p-4 px-2", "py-1") == "px-2 py-1"
     end
   end
@@ -193,12 +193,12 @@ defmodule Gust.MergeTest do
       assert Gust.merge("tw:bg-blue-400", "bg-red-500") == "tw:bg-blue-400 bg-red-500"
     end
 
-    test "directional decomposition with tw: prefix" do
-      assert Gust.merge("tw:p-4", "tw:px-2") == "tw:py-4 tw:px-2"
+    test "shorthand dropped when longhand overrides with tw: prefix" do
+      assert Gust.merge("tw:p-4", "tw:px-2") == "tw:px-2"
     end
 
-    test "transitive decomposition with tw: prefix" do
-      assert Gust.merge("tw:p-4", "tw:pt-2") == "tw:px-4 tw:pb-4 tw:pt-2"
+    test "shorthand dropped for transitive longhand with tw: prefix" do
+      assert Gust.merge("tw:p-4", "tw:pt-2") == "tw:pt-2"
     end
 
     test "tw: prefix text color conflict" do
@@ -228,12 +228,12 @@ defmodule Gust.MergeTest do
       assert Gust.merge("tw:md:bg-blue-400", "md:tw:bg-red-500") == "md:tw:bg-red-500"
     end
 
-    test "directional decomposition preserves tw:md: prefix ordering" do
-      assert Gust.merge("tw:md:p-4", "tw:md:px-2") == "tw:md:py-4 tw:md:px-2"
+    test "shorthand dropped when longhand overrides with tw:md: prefix" do
+      assert Gust.merge("tw:md:p-4", "tw:md:px-2") == "tw:md:px-2"
     end
 
-    test "transitive decomposition preserves tw:md: prefix ordering" do
-      assert Gust.merge("tw:md:p-4", "tw:md:pt-2") == "tw:md:px-4 tw:md:pb-4 tw:md:pt-2"
+    test "shorthand dropped for transitive longhand with tw:md: prefix" do
+      assert Gust.merge("tw:md:p-4", "tw:md:pt-2") == "tw:md:pt-2"
     end
   end
 
@@ -251,12 +251,12 @@ defmodule Gust.MergeTest do
       assert Gust.merge("tw-p-4 tw-flex", "tw-m-2") == "tw-p-4 tw-flex tw-m-2"
     end
 
-    test "directional decomposition preserves prefix" do
-      assert Gust.merge("tw-p-4", "tw-px-2") == "tw-py-4 tw-px-2"
+    test "shorthand dropped when longhand overrides, prefix preserved" do
+      assert Gust.merge("tw-p-4", "tw-px-2") == "tw-px-2"
     end
 
-    test "transitive decomposition preserves prefix" do
-      assert Gust.merge("tw-p-4", "tw-pt-2") == "tw-px-4 tw-pb-4 tw-pt-2"
+    test "shorthand dropped for transitive longhand, prefix preserved" do
+      assert Gust.merge("tw-p-4", "tw-pt-2") == "tw-pt-2"
     end
 
     test "non-prefixed class is still classified and overridden" do
@@ -273,6 +273,45 @@ defmodule Gust.MergeTest do
 
     test "prefix stripped only from start, not mid-class" do
       assert Gust.merge("tw-bg-tw-blue", "tw-bg-red-500") == "tw-bg-red-500"
+    end
+  end
+
+  describe "merge/2 - directional decomposition (decompose: true)" do
+    setup do
+      Application.put_env(:gust, :decompose, true)
+      on_exit(fn -> Application.delete_env(:gust, :decompose) end)
+    end
+
+    test "p shorthand + px longhand decomposes to py + px" do
+      assert Gust.merge("p-4", "px-2") == "py-4 px-2"
+    end
+
+    test "p shorthand + pt longhand decomposes transitively" do
+      assert Gust.merge("p-4", "pt-2") == "px-4 pb-4 pt-2"
+    end
+
+    test "px shorthand + pr longhand decomposes to pl + pr" do
+      assert Gust.merge("px-4", "pr-2") == "pl-4 pr-2"
+    end
+
+    test "m shorthand + mx longhand decomposes to my + mx" do
+      assert Gust.merge("m-4", "mx-2") == "my-4 mx-2"
+    end
+
+    test "gap shorthand + gap-x longhand decomposes to gap-y + gap-x" do
+      assert Gust.merge("gap-4", "gap-x-2") == "gap-y-4 gap-x-2"
+    end
+
+    test "shorthand then two longhands" do
+      assert Gust.merge("p-4 px-2", "py-1") == "px-2 py-1"
+    end
+
+    test "decomposition with tw: variant prefix" do
+      assert Gust.merge("tw:p-4", "tw:px-2") == "tw:py-4 tw:px-2"
+    end
+
+    test "transitive decomposition with tw: variant prefix" do
+      assert Gust.merge("tw:p-4", "tw:pt-2") == "tw:px-4 tw:pb-4 tw:pt-2"
     end
   end
 end
